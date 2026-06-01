@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>早押しクイズ - 参加者</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="compact-ui">
+  <div class="topbar">
+    <div class="title">早押しクイズ — 参加者</div>
+    <div class="room">
+      部屋 <b id="room-code">----</b> ・ <span id="me-nick">-</span>
+      <span class="me-score-wrap">・ あなたの得点 <b id="me-score" style="color:var(--good);">0</b></span>
+    </div>
+    <div class="actions">
+      <button id="btn-home" class="btn ghost small" type="button">🏠 ホームへ戻る</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="stage" id="stage">
+      <div class="phase-label" id="phase-label">待機中</div>
+      <div class="q-index" id="q-index"></div>
+      <div class="image-wrap"><img id="stage-image" alt="" /></div>
+      <div class="text-wrap">
+        <span class="typed" id="typed"></span><span class="caret" id="caret" style="display:none;"></span>
+      </div>
+      <div class="title-overlay" id="title-overlay">第１問</div>
+    </div>
+
+    <div id="answer-banner" class="answer-banner" style="display:none;">
+      <div><span class="who" id="who">-</span> さんが回答中</div>
+      <div class="count" id="count">10.0</div>
+    </div>
+
+    <div id="auto-banner" class="answer-banner" style="display:none;background:linear-gradient(90deg,#fff3cd,#ffe2a3);">
+      <div>次の問題まで</div>
+      <div class="count" id="auto-count">30.0</div>
+    </div>
+
+    <div id="explanation-banner" class="explanation-banner">
+      <h4>正解 / 解説</h4>
+      <p class="answer-text" id="exp-answer"></p>
+      <p class="explanation-text" id="exp-text"></p>
+    </div>
+
+    <div class="player-main">
+      <div class="buzz-row" id="buzz-row">
+        <div class="buzz-side">
+          <div class="buzz-wrap">
+            <button id="buzz" class="buzz" aria-label="早押し">押</button>
+          </div>
+          <div class="kbd-hint">
+            スペースキーでも押せます
+            <div class="buzz-layout-controls">
+              <button id="btn-toggle-side" class="btn small ghost" type="button">⇄ 左右入れ替え</button>
+              <div class="buzz-skin-bar" id="buzz-skin-bar" role="group" aria-label="押ボタンのデザイン"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="side-panels">
+          <div class="ranking">
+            <h3>早押しランキング (上位5)</h3>
+            <ol id="ranking-list"></ol>
+          </div>
+
+          <div class="scoreboard" id="scoreboard">
+            <h3>スコア</h3>
+            <ol id="score-list"></ol>
+          </div>
+
+          <div class="panel item-feed-panel" id="item-feed-panel">
+            <h3>📢 お知らせ</h3>
+            <div id="item-feed-list" class="item-feed-list"></div>
+          </div>
+
+          <div class="panel items-player-panel" id="items-panel" style="display:none;">
+            <h3>お助けアイテム</h3>
+            <p class="muted-note compact-hint">タップで使用（多くは次の問題で発動）</p>
+            <div id="items-grid" class="items-grid"></div>
+            <p id="item-queue-hint" class="item-queue-hint"></p>
+          </div>
+
+          <div class="panel">
+            <h3>リアクション</h3>
+            <div class="reaction-bar" id="reaction-bar">
+              <button class="reaction-btn" data-emoji="👏" type="button">👏</button>
+              <button class="reaction-btn" data-emoji="🎉" type="button">🎉</button>
+              <button class="reaction-btn" data-emoji="😆" type="button">😆</button>
+              <button class="reaction-btn" data-emoji="😱" type="button">😱</button>
+              <button class="reaction-btn" data-emoji="🤔" type="button">🤔</button>
+              <button class="reaction-btn" data-emoji="💡" type="button">💡</button>
+              <button class="reaction-btn" data-emoji="🔥" type="button">🔥</button>
+              <button class="reaction-btn" data-emoji="💯" type="button">💯</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="flash" class="flash"></div>
+  <div id="reaction-layer" class="reaction-layer"></div>
+
+  <!-- 結果発表モーダル -->
+  <div id="results-backdrop" class="results-backdrop" role="dialog" aria-modal="true">
+    <div class="results-modal">
+      <h2 id="results-title">🏆 結果発表</h2>
+      <div id="results-suspense" class="results-suspense">
+        <span class="suspense-dots">
+          <span></span><span></span><span></span>
+        </span>
+      </div>
+      <div id="podium" class="podium"></div>
+    </div>
+  </div>
+  <div id="confetti" class="confetti"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/items-catalog.js"></script>
+  <script src="/player.js"></script>
+</body>
+</html>

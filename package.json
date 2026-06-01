@@ -1,0 +1,26 @@
+{
+  "name": "quiz-buzzer-hp",
+  "version": "1.1.0",
+  "description": "早押しクイズWebアプリ（部屋機能・口頭回答・問題セット保存・スコア・画像クイズ・効果音差替）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "quiz",
+    "buzzer",
+    "realtime",
+    "socket.io"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "socket.io": "^4.7.5"
+  }
+}

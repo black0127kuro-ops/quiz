@@ -1,0 +1,15 @@
+{
+  "name": "quiz-buzzer",
+  "description": "早押しクイズ Web アプリ (Express + Socket.IO)",
+  "image": "node:20",
+  "build": {
+    "command": "npm install"
+  },
+  "run": {
+    "command": "npm start",
+    "envvars": {
+      "PORT": "3000",
+      "NODE_ENV": "production"
+    }
+  }
+}

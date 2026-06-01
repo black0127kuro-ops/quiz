@@ -1,0 +1,39 @@
+# Fly.io 用設定 - https://fly.io/docs/reference/configuration/
+# 初回: `fly launch --no-deploy --copy-config`
+# デプロイ: `fly deploy`
+app = "quiz-buzzer"
+primary_region = "nrt"  # 東京リージョン
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/"
+
+[[mounts]]
+  source = "quiz_data"
+  destination = "/app/data"
+
+[[mounts]]
+  source = "quiz_uploads"
+  destination = "/app/public/uploads"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256

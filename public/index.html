@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>早押しクイズ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1>早押しクイズ</h1>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h2>主催者として部屋を作る</h2>
+        <p style="color:var(--muted);margin:0;">4桁の部屋番号が自動で発行されます。</p>
+        <button id="btn-create" class="btn full">部屋をつくる</button>
+        <div class="notice" id="create-notice"></div>
+      </div>
+
+      <div class="card">
+        <h2>参加者として参加する</h2>
+        <label for="code">部屋番号 (4桁)</label>
+        <input id="code" inputmode="numeric" maxlength="4" placeholder="例: 1234" />
+        <label for="nick">ニックネーム</label>
+        <input id="nick" maxlength="20" placeholder="例: たろう" />
+        <button id="btn-join" class="btn secondary full">参加する</button>
+        <div class="notice" id="join-notice"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    document.getElementById('btn-create').addEventListener('click', () => {
+      const notice = document.getElementById('create-notice');
+      notice.textContent = '部屋を作成中...';
+      socket.emit('createRoom', {}, (res) => {
+        if (res && res.ok) {
+          sessionStorage.setItem('hostRoomCode', res.code);
+          location.href = `/host?code=${res.code}`;
+        } else {
+          notice.textContent = '部屋の作成に失敗しました。';
+        }
+      });
+    });
+
+    document.getElementById('btn-join').addEventListener('click', () => {
+      const code = document.getElementById('code').value.trim();
+      const nick = document.getElementById('nick').value.trim();
+      const notice = document.getElementById('join-notice');
+      if (!/^\d{4}$/.test(code)) {
+        notice.textContent = '部屋番号は4桁の数字で入力してください。';
+        return;
+      }
+      if (!nick) {
+        notice.textContent = 'ニックネームを入力してください。';
+        return;
+      }
+      sessionStorage.setItem('playerNick', nick);
+      sessionStorage.setItem('playerRoom', code);
+      location.href = `/player?code=${code}&nick=${encodeURIComponent(nick)}`;
+    });
+
+    document.getElementById('code').addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+    });
+  </script>
+</body>
+</html>

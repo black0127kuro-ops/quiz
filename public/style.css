@@ -1299,5 +1299,97 @@ body.compact-ui .explanation-banner .explanation-text {
 }
 
 body.compact-ui .players-list .chip { padding: 3px 8px; font-size: 11px; }
+
+/* 使い方ガイド ----------------------------------------------------------- */
+.guide-page .guide-container { max-width: 820px; padding-bottom: 32px; }
+.guide-hero { margin-bottom: 16px; }
+.guide-hero h1 { margin: 0 0 10px; font-size: clamp(24px, 4vw, 32px); }
+.guide-lead { margin: 0; line-height: 1.7; color: var(--text-2); font-size: 15px; }
+.guide-toc h2 { margin: 0 0 10px; font-size: 15px; }
+.guide-toc ol {
+  margin: 0;
+  padding-left: 1.4em;
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+.guide-toc a { color: var(--link); font-weight: 700; text-decoration: none; }
+.guide-toc a:hover { text-decoration: underline; }
+.guide-section { margin-top: 14px; }
+.guide-section h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  color: var(--text);
+  border-bottom: 2px solid var(--border-2);
+  padding-bottom: 6px;
+}
+.guide-section h3 {
+  margin: 16px 0 8px;
+  font-size: 15px;
+  color: var(--text-2);
+}
+.guide-steps {
+  margin: 0;
+  padding-left: 1.35em;
+  display: grid;
+  gap: 10px;
+  line-height: 1.65;
+}
+.guide-list {
+  margin: 0;
+  padding-left: 1.35em;
+  display: grid;
+  gap: 8px;
+  line-height: 1.6;
+}
+.guide-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 640px) { .guide-cols { grid-template-columns: 1fr; } }
+.guide-card {
+  background: #fff7e3;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.guide-card h3 { margin-top: 0; }
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 8px 0;
+}
+.guide-table th,
+.guide-table td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.guide-table th { background: #fff7e3; font-weight: 800; }
+.guide-table .item-emoji { font-size: 22px; text-align: center; width: 44px; }
+.guide-table .muted-cell { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.items-guide-table { overflow-x: auto; }
+.guide-faq { margin: 0; }
+.guide-faq dt {
+  font-weight: 800;
+  margin-top: 14px;
+  color: var(--text);
+}
+.guide-faq dt:first-child { margin-top: 0; }
+.guide-faq dd {
+  margin: 6px 0 0;
+  padding-left: 0;
+  color: var(--text-2);
+  line-height: 1.65;
+}
+.guide-footer {
+  margin-top: 20px;
+  text-align: center;
+}
+.guide-footer .btn { text-decoration: none; }
+.topbar .actions a.btn { text-decoration: none; }
 body.compact-ui .items-master-toggle { font-size: 13px; gap: 6px; }
 body.compact-ui .items-config-actions { margin-bottom: 4px !important; }

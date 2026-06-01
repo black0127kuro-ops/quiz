@@ -122,7 +122,15 @@ function buildSessionCookie(token) {
 
 function siteAuth(req, res, next) {
   if (!SITE_PASSWORD) return next();
-  if (req.path === '/login.html' || req.path === '/api/auth/login' || req.path === '/api/auth/logout') {
+  if (
+    req.path === '/login.html'
+    || req.path === '/guide.html'
+    || req.path === '/guide'
+    || req.path === '/style.css'
+    || req.path === '/items-catalog.js'
+    || req.path === '/api/auth/login'
+    || req.path === '/api/auth/logout'
+  ) {
     return next();
   }
   if (isRequestAuthed(req)) return next();
@@ -178,6 +186,7 @@ app.use(siteAuth);
 app.use(express.static(PUBLIC_DIR));
 
 app.get('/', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
+app.get('/guide', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'guide.html')));
 app.get('/host', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'host.html')));
 app.get('/player', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'player.html')));
 

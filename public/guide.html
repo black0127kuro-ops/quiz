@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>使い方 — 早押しクイズ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="compact-ui guide-page">
+  <div class="topbar">
+    <div class="title">早押しクイズ — 使い方</div>
+    <div class="actions">
+      <a href="/" class="btn ghost small">🏠 トップへ</a>
+    </div>
+  </div>
+
+  <div class="container guide-container">
+    <header class="guide-hero">
+      <h1>使い方ガイド</h1>
+      <p class="guide-lead">
+        スマホやパソコンでつながる<strong>早押しクイズ</strong>です。
+        主催者が問題を出し、参加者が「押」ボタンで早押しして口頭で答えます。
+        このページを最初に読めば、初めての方でも進行できます。
+      </p>
+    </header>
+
+    <nav class="guide-toc panel" aria-label="目次">
+      <h2>目次</h2>
+      <ol>
+        <li><a href="#flow">クイズの流れ（全体像）</a></li>
+        <li><a href="#prepare">始める前の準備</a></li>
+        <li><a href="#start">トップ画面（部屋の作成・参加）</a></li>
+        <li><a href="#host">主催者の操作</a></li>
+        <li><a href="#player">参加者の操作</a></li>
+        <li><a href="#items">お助けアイテム</a></li>
+        <li><a href="#faq">よくある質問</a></li>
+      </ol>
+    </nav>
+
+    <section id="flow" class="guide-section panel">
+      <h2>クイズの流れ（全体像）</h2>
+      <ol class="guide-steps">
+        <li>
+          <strong>主催者</strong>が部屋をつくる → <strong>4桁の部屋番号</strong>が表示される
+        </li>
+        <li>
+          <strong>参加者</strong>がその番号とニックネームを入れて入室する
+        </li>
+        <li>
+          主催者が問題を選び<strong>「この問題で出題」</strong> → 画面上に問題文が1文字ずつ流れる
+        </li>
+        <li>
+          参加者が<strong>「押」</strong>（またはスペースキー）で早押し → 出題が止まり、早押し順が決まる
+        </li>
+        <li>
+          早押しした人から<strong>10秒</strong>以内に口頭で回答 → 主催者が<strong>正解 / 不正解</strong>を押す
+        </li>
+        <li>
+          不正解なら次の早押し順の人へ。全員不正解または正解でその問は終了 → 解説が出る
+        </li>
+        <li>
+          次の問題へ進む。最後に<strong>結果発表</strong>で順位を表示できる
+        </li>
+      </ol>
+      <p class="muted-note">
+        正解メモ・解説は出題中には見えません。正解・不正解のあと、全員の画面に表示されます。
+      </p>
+    </section>
+
+    <section id="prepare" class="guide-section panel">
+      <h2>始める前の準備</h2>
+      <ul class="guide-list">
+        <li><strong>主催者用</strong> … パソコン＋大きめの画面（プロジェクター推奨）＋このサイトの主催者画面</li>
+        <li><strong>参加者用</strong> … スマホまたはパソコン＋「参加者」画面（Chrome など最新ブラウザ推奨）</li>
+        <li><strong>同じ Wi‑Fi / ネット</strong> … みんなが同じサイトの URL にアクセスできること</li>
+        <li><strong>パスワード</strong> … サイトに鍵がかかっている場合、最初にログイン画面が出ます（主催者から共有されたパスワードを入力）</li>
+        <li><strong>音声</strong> … 効果音を鳴らす場合、ブラウザで一度画面をタップして「音を許可」してください</li>
+      </ul>
+    </section>
+
+    <section id="start" class="guide-section panel">
+      <h2>トップ画面（部屋の作成・参加）</h2>
+      <div class="guide-cols">
+        <div class="guide-card">
+          <h3>主催者：部屋をつくる</h3>
+          <p>「部屋をつくる」を押すと、自動で<strong>4桁の部屋番号</strong>が発行され、主催者画面に移動します。</p>
+          <p class="muted-note">参加者にこの番号を伝えてください（口頭・チャット・画面に写すなど）。</p>
+        </div>
+        <div class="guide-card">
+          <h3>参加者：参加する</h3>
+          <ol>
+            <li>部屋番号（4桁の数字）を入力</li>
+            <li>ニックネーム（表示名）を入力</li>
+            <li>「参加する」を押す</li>
+          </ol>
+          <p class="muted-note">同じ部屋に、別のニックネームで何人でも参加できます。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="host" class="guide-section panel">
+      <h2>主催者の操作</h2>
+
+      <h3>問題の用意</h3>
+      <ul class="guide-list">
+        <li><strong>問題リスト</strong> … 左側の一覧から問題を選び、問題文・正解メモ・配点・解説・画像を編集</li>
+        <li><strong>＋ 新規追加</strong> … 問題を増やす</li>
+        <li><strong>問題セット管理</strong> … まとまった問題を保存・読み込み・エクスポート（次回以降も使える）</li>
+        <li><strong>出題済み</strong> … すでに出した問題には印が付きます</li>
+      </ul>
+
+      <h3>出題と進行</h3>
+      <table class="guide-table">
+        <thead>
+          <tr><th>操作</th><th>いつ使うか</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>この問題で出題</strong></td><td>選んだ問題を最初から流す（早押し・得点はリセット）</td></tr>
+          <tr><td><strong>続きを流す</strong></td><td>早押しで止まったところから、また文字が流れ始める</td></tr>
+          <tr><td><strong>次の問題へ</strong></td><td>別の問題に切り替え（早押し順などリセット）</td></tr>
+          <tr><td><strong>出題スピード</strong></td><td>1文字あたりの表示速度（遅い←→速い）</td></tr>
+          <tr><td><strong>正解 / 不正解</strong></td><td>回答者の口頭回答を聞いて判定（効果音あり）</td></tr>
+        </tbody>
+      </table>
+
+      <h3>キーボードショートカット（主催者）</h3>
+      <div class="shortcut-help">
+        <div><kbd>Space</kbd> … 出題開始 / 続きを流す / 次の問題へ（状況に応じて自動切替）</div>
+        <div><kbd>O</kbd> または <kbd>1</kbd> … 正解</div>
+        <div><kbd>X</kbd> または <kbd>2</kbd> … 不正解</div>
+        <div><kbd>N</kbd> … 次の問題へ</div>
+        <div><kbd>R</kbd> … 今の問題を最初から</div>
+        <div><kbd>S</kbd> … 問題順をシャッフル</div>
+        <div><kbd>?</kbd> … ショートカット一覧</div>
+      </div>
+
+      <h3>その他の主催者機能</h3>
+      <ul class="guide-list">
+        <li><strong>効果音設定</strong> … デデン・正解・不正解・カウントダウンなどを差し替え</li>
+        <li><strong>結果発表</strong> … 表彰台アニメーションで順位表示</li>
+        <li><strong>スコア表示 ON/OFF</strong> … 参加者に自分の得点・順位表を見せるかどうか</li>
+        <li><strong>お助けアイテム</strong> … 使う種類にチェック → 問題の合間に<strong>手動で配布</strong>（下記）</li>
+      </ul>
+
+      <h3>お助けアイテムの配布（主催者）</h3>
+      <ol class="guide-steps">
+        <li>「お助けアイテムを使う」にチェックを入れる</li>
+        <li>使いたい種類にチェック（第1問が始まったあとは種類の変更不可）</li>
+        <li>出題中・回答中以外の<strong>合間</strong>で「アイテム配布」から配る</li>
+      </ol>
+      <ul class="guide-list">
+        <li><strong>配布先ランダム</strong> … 参加者の中からランダム</li>
+        <li><strong>上位3名以外へ</strong> … スコア上位3名を除いてランダム</li>
+        <li><strong>選択者に配布</strong> … プルダウンで指定（アイテムも指定必須）</li>
+        <li>アイテム欄で <strong>🎲 ランダム</strong> を選ぶと、有効な種類からランダムで1つ配る</li>
+      </ul>
+    </section>
+
+    <section id="player" class="guide-section panel">
+      <h2>参加者の操作</h2>
+
+      <h3>早押し</h3>
+      <ul class="guide-list">
+        <li>画面の大きな<strong>「押」</strong>ボタン、または<strong>スペースキー</strong>で早押し</li>
+        <li>早押しすると問題文の表示が止まり、<strong>早押しランキング</strong>に順位が付く（上位5名まで表示）</li>
+        <li>自分の順番が来たら<strong>10秒</strong>以内に口頭で回答（主催者が正誤判定）</li>
+        <li>出題中・自分以外が回答中は押せません</li>
+      </ul>
+
+      <h3>画面の見方</h3>
+      <ul class="guide-list">
+        <li><strong>出題エリア</strong> … 主催者と同じ問題文が流れる（画像付き問題もあり）</li>
+        <li><strong>早押しランキング</strong> … 誰が何位で押したか・回答中の人</li>
+        <li><strong>スコア</strong> … 主催者が ON にしているときだけ表示</li>
+        <li><strong>お知らせ</strong> … アイテムの配布・使用など（青＝全体、赤＝自分だけ）</li>
+        <li><strong>リアクション</strong> … 拍手などのスタンプ（雰囲気づくり用）</li>
+      </ul>
+
+      <h3>お助けアイテム（参加者）</h3>
+      <ul class="guide-list">
+        <li>主催者から配布されると「お助けアイテム」欄に表示される</li>
+        <li>タップで使用（多くは<strong>次の問題</strong>に効果。シールドはすぐ有効）</li>
+        <li>使ったアイテムは所持から消える</li>
+        <li>出題中・回答中は使えない</li>
+        <li>ボタンに書いてある<strong>効果の説明</strong>を読んでから使う</li>
+      </ul>
+
+      <h3>押ボタンのカスタム</h3>
+      <p>「左右入れ替え」でレイアウト変更、デザイン一覧から押ボタンの見た目を選べます（お好みで）。</p>
+    </section>
+
+    <section id="items" class="guide-section panel">
+      <h2>お助けアイテム一覧</h2>
+      <p class="muted-note">
+        主催者が使う種類にチェックしたものだけがゲームに登場します。
+        配布は主催者が問題の合間に行います。
+      </p>
+      <div id="items-guide-table" class="items-guide-table"></div>
+    </section>
+
+    <section id="faq" class="guide-section panel">
+      <h2>よくある質問</h2>
+      <dl class="guide-faq">
+        <dt>参加者が入室できない</dt>
+        <dd>部屋番号が4桁か、主催者がまだ部屋を作っているか確認してください。パスワード付きサイトの場合はログインも必要です。</dd>
+
+        <dt>押しても反応しない</dt>
+        <dd>出題が始まっているか、すでに誰かが回答中でないか確認してください。ページを再読み込み（Ctrl+Shift+R）して再度参加も試してください。</dd>
+
+        <dt>音が鳴らない</dt>
+        <dd>ブラウザは最初のクリックまで音を鳴らさないことがあります。画面を一度タップしてから、主催者が再度操作してください。</dd>
+
+        <dt>主催者画面を閉じたらどうなる？</dt>
+        <dd>部屋は主催者が接続している間だけ有効です。主催者のブラウザを閉じると部屋がなくなるので、進行中は主催者画面を開いたままにしてください。</dd>
+
+        <dt>正解メモは参加者に見える？</dt>
+        <dd>出題中は見えません。正解・不正解の判定後に、解説バナーで正解と解説が表示されます。</dd>
+
+        <dt>スマホで主催できる？</dt>
+        <dd>可能ですが、問題編集や配布操作はパソコンの方がやりやすいです。進行だけならスマホでもできます。</dd>
+      </dl>
+    </section>
+
+    <footer class="guide-footer">
+      <a href="/" class="btn">トップへ戻って部屋を作る / 参加する</a>
+    </footer>
+  </div>
+
+  <script src="/items-catalog.js"></script>
+  <script>
+    (function () {
+      const el = document.getElementById('items-guide-table');
+      if (!el || !window.ITEM_CATALOG) return;
+      const table = document.createElement('table');
+      table.className = 'guide-table';
+      table.innerHTML = '<thead><tr><th></th><th>名前</th><th>効果</th><th>備考</th></tr></thead>';
+      const tbody = document.createElement('tbody');
+      window.ITEM_CATALOG.forEach(def => {
+        const tr = document.createElement('tr');
+        const note = [];
+        if (def.once) note.push('1試合1回');
+        if (def.instant) note.push('すぐ有効');
+        if (def.exclusiveGroup === 'steal') note.push('奪取系は同時予約不可');
+        tr.innerHTML =
+          '<td class="item-emoji">' + (def.emoji || '') + '</td>'
+          + '<td><strong>' + escapeHtml(def.name) + '</strong></td>'
+          + '<td>' + escapeHtml(def.desc || '') + '</td>'
+          + '<td class="muted-cell">' + escapeHtml(note.join('・')) + '</td>';
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      el.appendChild(table);
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -19,6 +19,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 未ログインの人は `/login.html` に誘導され、正しいパスワードで Cookie が付与されます。Socket.IO も同じ Cookie で保護されます。
 
+使い方ガイドは **`/guide.html`**（ログイン不要で閲覧可能。ゲーム本体はログイン後）。
+
 ## 2. ローカルで確認
 
 ```powershell

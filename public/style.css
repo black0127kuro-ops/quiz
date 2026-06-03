@@ -1469,11 +1469,7 @@ body.compact-ui .items-config-actions { margin-bottom: 4px !important; }
   background: rgba(255, 255, 255, 0.55);
 }
 .site-footer-nav {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px 20px;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
 }
 .site-footer-nav a {
   color: var(--link);

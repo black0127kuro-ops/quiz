@@ -10,7 +10,7 @@
   <div class="container">
     <div class="hero">
       <h1>🎯 早押しクイズ</h1>
-      <p class="hero-sub"><a href="/guide.html">使い方ガイド</a></p>
+      <p class="hero-sub"><a href="/guide.html">使い方ガイド</a> ・ <a href="/terms.html">利用規約</a></p>
     </div>
 
     <section class="home-intro panel" aria-label="このサイトについて">
@@ -22,10 +22,11 @@
       <ul class="home-intro-points">
         <li><strong>無料</strong> … 利用料・会員登録は不要です（個人が運営する非営利のツールです）。</li>
         <li><strong>こんな使い方</strong> … 授業の理解度チェック、放課後のクイズ大会、オンラインの集まりなど。</li>
-        <li><strong>安全に使えます</strong> … 本名登録は不要。ニックネームと4桁の部屋番号だけで参加できます。</li>
+        <li><strong>プライバシー</strong> … 本名登録は不要。問題セットはお使いのブラウザにのみ保存（サーバーに問題文を永続保存しません）。</li>
+        <li><strong>画像なし</strong> … 第三者コンテンツをサーバーに保存しない設計です（<a href="/terms.html">利用規約</a>参照）。</li>
       </ul>
       <p class="home-intro-note muted-note">
-        部屋番号は主催者から共有された方だけが参加してください。
+        部屋番号は主催者から共有された方だけが参加してください。ご利用前に<a href="/terms.html">利用規約</a>をご確認ください。
       </p>
     </section>
 
@@ -33,7 +34,11 @@
       <div class="card">
         <h2>主催者として部屋を作る</h2>
         <p style="color:var(--muted);margin:0;">4桁の部屋番号が自動で発行されます。</p>
-        <button id="btn-create" class="btn full">部屋をつくる</button>
+        <label class="terms-agree">
+          <input type="checkbox" id="agree-terms" />
+          <span><a href="/terms.html" target="_blank" rel="noopener">利用規約</a>に同意する</span>
+        </label>
+        <button id="btn-create" class="btn full" disabled>部屋をつくる</button>
         <div class="notice" id="create-notice"></div>
       </div>
 
@@ -49,17 +54,34 @@
     </div>
   </div>
 
+  <footer class="site-footer">
+    <nav class="site-footer-nav" aria-label="フッターナビ">
+      <a href="/terms.html">利用規約</a>
+      <a href="/guide.html">使い方</a>
+    </nav>
+    <p class="site-footer-copy">早押しクイズ（個人運営）</p>
+  </footer>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+    const btnCreate = document.getElementById('btn-create');
+    const agreeTerms = document.getElementById('agree-terms');
 
-    document.getElementById('btn-create').addEventListener('click', () => {
+    agreeTerms.addEventListener('change', () => {
+      btnCreate.disabled = !agreeTerms.checked;
+    });
+
+    btnCreate.addEventListener('click', () => {
+      if (!agreeTerms.checked) return;
       const notice = document.getElementById('create-notice');
       notice.textContent = '部屋を作成中...';
       socket.emit('createRoom', {}, (res) => {
         if (res && res.ok) {
           sessionStorage.setItem('hostRoomCode', res.code);
           location.href = `/host?code=${res.code}`;
+        } else if (res && res.error === 'rate_limited') {
+          notice.textContent = '作成回数の上限に達しました。しばらく待ってからお試しください。';
         } else {
           notice.textContent = '部屋の作成に失敗しました。';
         }

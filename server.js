@@ -7,20 +7,14 @@
  *  - 早押し（上位5名・1/100秒精度・サーバ受信時刻ベース）
  *  - 10 秒カウント（0 で自動不正解 → 次順位者へ）
  *  - 「続きを流す」「最初から」「次の問題」での順位リセット
- *  - 問題セットの保存 / 読込 / 削除 / エクスポート / インポート（data/question-sets.json に永続化）
  *  - スコア表（参加者ごとの正解数を集計、全員の画面に表示）
- *  - 画像付きクイズ（出題ごとに画像を添付）
- *  - 効果音差し替え（デデン / ピンポン / ブー / ブザー）
- *      ・プリセットURL（Mixkit 等の CC0 直リンク）
- *      ・任意の音源ファイルをアップロード（multer）
- *      ・空の場合は Web Audio API 合成音にフォールバック
+ *  - 効果音差し替え（デデン / ピンポン / ブー / ブザー）… 主催者ブラウザ内のみ
  */
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const crypto = require('crypto');
 const express = require('express');
-const multer = require('multer');
 const { Server } = require('socket.io');
 const ITEM_CATALOG = require('./public/items-catalog.js');
 const ITEM_BY_ID = Object.fromEntries(ITEM_CATALOG.map(it => [it.id, it]));
@@ -28,17 +22,9 @@ const DEFAULT_ENABLED_ITEMS = ['delay5', 'steal_stealth', 'flip', 'flash', 'bonu
 
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, 'public');
-const UPLOAD_DIR = path.join(PUBLIC_DIR, 'uploads');
-const DATA_DIR = path.join(ROOT, 'data');
-const SETS_FILE = path.join(DATA_DIR, 'question-sets.json');
 
-// 必要ディレクトリ・ファイルの初期化
-[UPLOAD_DIR, DATA_DIR].forEach(d => {
-  if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
-});
-if (!fs.existsSync(SETS_FILE)) {
-  fs.writeFileSync(SETS_FILE, JSON.stringify({ sets: [] }, null, 2), 'utf8');
-}
+const MAX_ROOMS = 500;
+const MAX_PLAYERS_PER_ROOM = 80;
 
 // ----------------------------------------------------------------------
 // .env 読み込み（任意）
@@ -71,216 +57,81 @@ if (process.env.TRUST_PROXY === '1') app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' },
-  maxHttpBufferSize: 25e6 // base64インポート等での大きめのペイロードを許容
+  maxHttpBufferSize: 2e6
 });
 
-app.use(express.json({ limit: '25mb' }));
+app.use(express.json({ limit: '1mb' }));
+
+// セキュリティヘッダ・旧アップロードパスの無効化
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+app.use('/uploads', (_req, res) => {
+  res.status(410).json({ ok: false, error: 'uploads_disabled' });
+});
+app.use('/api/upload', (_req, res) => {
+  res.status(410).json({ ok: false, error: 'uploads_disabled' });
+});
+app.use('/api/sets', (_req, res) => {
+  res.status(410).json({ ok: false, error: 'sets_api_removed_use_browser_storage' });
+});
+
 app.use(express.static(PUBLIC_DIR));
 
 app.get('/', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
 app.get('/guide', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'guide.html')));
+app.get('/terms', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'terms.html')));
 app.get('/host', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'host.html')));
 app.get('/player', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'player.html')));
 
 // ----------------------------------------------------------------------
-// アップロード (multer)
+// レート制限（メモリ内・単一プロセス向け）
 // ----------------------------------------------------------------------
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname || '').toLowerCase().replace(/[^.\w]/g, '').slice(0, 8);
-    const id = crypto.randomBytes(8).toString('hex');
-    cb(null, `${Date.now()}_${id}${ext || ''}`);
-  }
-});
-const ALLOWED_IMG = /^image\/(png|jpe?g|gif|webp|bmp|svg\+xml)$/i;
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
-    const kind = req.params.kind;
-    if (kind === 'image' && !ALLOWED_IMG.test(file.mimetype)) {
-      return cb(new Error('画像形式が無効です'));
-    }
-    cb(null, true);
-  }
-});
-
-app.post('/api/upload/:kind(image)', (req, res) => {
-  upload.single('file')(req, res, (err) => {
-    if (err) return res.status(400).json({ ok: false, error: err.message });
-    if (!req.file) return res.status(400).json({ ok: false, error: 'ファイルがありません' });
-    const url = `/uploads/${req.file.filename}`;
-    res.json({ ok: true, url, originalName: req.file.originalname, size: req.file.size });
-  });
-});
-
-// ----------------------------------------------------------------------
-// 問題セット永続化 (JSON)
-// ----------------------------------------------------------------------
-function loadSets() {
-  try {
-    const txt = fs.readFileSync(SETS_FILE, 'utf8');
-    const obj = JSON.parse(txt);
-    if (obj && Array.isArray(obj.sets)) return obj;
-  } catch (_) {}
-  return { sets: [] };
+const rateBuckets = new Map();
+function clientIpFromSocket(socket) {
+  const h = socket.handshake.headers || {};
+  const xf = h['x-forwarded-for'];
+  if (typeof xf === 'string' && xf.length) return xf.split(',')[0].trim();
+  return socket.handshake.address || 'unknown';
 }
-function saveSets(data) {
-  fs.writeFileSync(SETS_FILE, JSON.stringify(data, null, 2), 'utf8');
-}
-
-app.get('/api/sets', (_req, res) => {
-  const data = loadSets();
-  // 一覧では questions の中身は省略（軽量化）
-  res.json({
-    ok: true,
-    sets: data.sets.map(s => ({
-      id: s.id,
-      name: s.name,
-      createdAt: s.createdAt,
-      updatedAt: s.updatedAt,
-      count: (s.questions || []).length
-    }))
-  });
-});
-app.get('/api/sets/:id', (req, res) => {
-  const data = loadSets();
-  const s = data.sets.find(x => x.id === req.params.id);
-  if (!s) return res.status(404).json({ ok: false, error: 'not_found' });
-  res.json({ ok: true, set: s });
-});
-app.post('/api/sets', (req, res) => {
-  const { name, questions } = req.body || {};
-  if (!name || !Array.isArray(questions)) {
-    return res.status(400).json({ ok: false, error: 'invalid_payload' });
-  }
-  const data = loadSets();
-  const id = crypto.randomBytes(8).toString('hex');
+function checkRateLimit(key, max, windowMs) {
   const now = Date.now();
-  const set = {
-    id,
-    name: String(name).slice(0, 80),
-    createdAt: now,
-    updatedAt: now,
-    questions: sanitizeQuestions(questions)
-  };
-  data.sets.unshift(set);
-  saveSets(data);
-  res.json({ ok: true, set });
-});
-app.put('/api/sets/:id', (req, res) => {
-  const { name, questions } = req.body || {};
-  const data = loadSets();
-  const idx = data.sets.findIndex(x => x.id === req.params.id);
-  if (idx < 0) return res.status(404).json({ ok: false, error: 'not_found' });
-  const cur = data.sets[idx];
-  if (typeof name === 'string') cur.name = name.slice(0, 80);
-  if (Array.isArray(questions)) cur.questions = sanitizeQuestions(questions);
-  cur.updatedAt = Date.now();
-  data.sets[idx] = cur;
-  saveSets(data);
-  res.json({ ok: true, set: cur });
-});
-app.delete('/api/sets/:id', (req, res) => {
-  const data = loadSets();
-  const before = data.sets.length;
-  data.sets = data.sets.filter(s => s.id !== req.params.id);
-  saveSets(data);
-  res.json({ ok: true, removed: before - data.sets.length });
-});
+  let bucket = rateBuckets.get(key);
+  if (!bucket || now >= bucket.resetAt) {
+    bucket = { count: 0, resetAt: now + windowMs };
+    rateBuckets.set(key, bucket);
+  }
+  bucket.count += 1;
+  return bucket.count <= max;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, b] of rateBuckets.entries()) {
+    if (now >= b.resetAt) rateBuckets.delete(k);
+  }
+}, 60_000);
+
+function sanitizeNickname(raw) {
+  return String(raw || '')
+    .replace(/[\x00-\x1f\x7f]/g, '')
+    .replace(/[<>&]/g, '')
+    .trim()
+    .slice(0, 20) || '名無し';
+}
 
 function sanitizeQuestions(arr) {
-  return (arr || []).map(q => ({
-    id: typeof q.id === 'string' && q.id ? q.id : crypto.randomBytes(6).toString('hex'),
-    text: String(q.text || ''),
-    image: typeof q.image === 'string' ? q.image : '',
-    answer: String(q.answer || ''),
-    explanation: String(q.explanation || ''),
+  return (arr || []).slice(0, 200).map(q => ({
+    id: typeof q.id === 'string' && q.id ? q.id.slice(0, 32) : crypto.randomBytes(6).toString('hex'),
+    text: String(q.text || '').slice(0, 2000),
+    answer: String(q.answer || '').slice(0, 500),
+    explanation: String(q.explanation || '').slice(0, 2000),
     points: Number.isFinite(Number(q.points)) ? Math.max(-99, Math.min(999, Math.round(Number(q.points)))) : 1
   }));
 }
-
-// インポート: 別環境で書き出した JSON（image が dataURL/外部URL/uploads パス）を受けて
-// dataURL は uploads に保存し直し、URL を差し替える
-app.post('/api/sets/import', (req, res) => {
-  const { name, questions } = req.body || {};
-  if (!name || !Array.isArray(questions)) {
-    return res.status(400).json({ ok: false, error: 'invalid_payload' });
-  }
-  const out = questions.map(q => {
-    const obj = {
-      id: crypto.randomBytes(6).toString('hex'),
-      text: String(q.text || ''),
-      image: '',
-      answer: String(q.answer || ''),
-      explanation: String(q.explanation || ''),
-      points: Number.isFinite(Number(q.points)) ? Math.round(Number(q.points)) : 1
-    };
-    const img = q.image;
-    if (typeof img === 'string' && img.startsWith('data:')) {
-      // base64 dataURL を保存
-      const m = img.match(/^data:(image\/[\w.+-]+);base64,(.+)$/);
-      if (m) {
-        const mime = m[1];
-        const ext = '.' + (mime.split('/')[1].split('+')[0] || 'png');
-        const fname = `${Date.now()}_${crypto.randomBytes(8).toString('hex')}${ext}`;
-        fs.writeFileSync(path.join(UPLOAD_DIR, fname), Buffer.from(m[2], 'base64'));
-        obj.image = `/uploads/${fname}`;
-      }
-    } else if (typeof img === 'string') {
-      obj.image = img; // /uploads/ や http(s):// はそのまま
-    }
-    return obj;
-  });
-  const data = loadSets();
-  const id = crypto.randomBytes(8).toString('hex');
-  const now = Date.now();
-  const set = {
-    id,
-    name: String(name).slice(0, 80),
-    createdAt: now,
-    updatedAt: now,
-    questions: out
-  };
-  data.sets.unshift(set);
-  saveSets(data);
-  res.json({ ok: true, set });
-});
-
-// エクスポート: 画像（/uploads/...）は base64 dataURL に変換してポータブルに
-app.get('/api/sets/:id/export', (req, res) => {
-  const data = loadSets();
-  const s = data.sets.find(x => x.id === req.params.id);
-  if (!s) return res.status(404).json({ ok: false, error: 'not_found' });
-  const out = {
-    name: s.name,
-    questions: s.questions.map(q => {
-      let image = q.image || '';
-      if (image.startsWith('/uploads/')) {
-        try {
-          const fp = path.join(PUBLIC_DIR, image.replace(/^\//, ''));
-          if (fs.existsSync(fp)) {
-            const buf = fs.readFileSync(fp);
-            const ext = path.extname(fp).toLowerCase().replace('.', '') || 'png';
-            const mime = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
-            image = `data:${mime};base64,${buf.toString('base64')}`;
-          }
-        } catch (_) {}
-      }
-      return {
-        text: q.text,
-        image,
-        answer: q.answer,
-        explanation: q.explanation || '',
-        points: Number.isFinite(Number(q.points)) ? Math.round(Number(q.points)) : 1
-      };
-    })
-  };
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="quiz-set-${s.id}.json"`);
-  res.send(JSON.stringify(out, null, 2));
-});
 
 // ----------------------------------------------------------------------
 // 部屋管理
@@ -308,7 +159,6 @@ function makeRoom(hostSocketId) {
 
     // 出題進行
     question: '',
-    image: '',
     revealIndex: 0,
     revealSpeed: 150,
     revealTimer: null,
@@ -804,7 +654,6 @@ function publicState(room) {
     revealing: room.revealing,
     questionLength: room.question.length,
     questionVisible: room.question.slice(0, room.revealIndex),
-    image: room.image || '',
     buzzes: room.buzzes.map(b => ({
       socketId: b.socketId,
       nickname: b.nickname,
@@ -962,7 +811,6 @@ function autoAdvanceToNext(room) {
   const q = room.questions[next];
   room.currentIndex = next;
   room.question = q.text || '';
-  room.image = q.image || '';
   room.revealIndex = 0;
   resetBuzzesAndAnswer(room);
   startQuestionWithTitle(room);
@@ -992,7 +840,6 @@ function startQuestionWithTitle(room) {
   const qStartBase = {
     length: room.question.length,
     speed: room.revealSpeed,
-    image: room.image,
     qIndex: room.currentIndex,
     qNumber: room.qNumber
   };
@@ -1160,6 +1007,13 @@ function resolveHostRoom(socket, code) {
 io.on('connection', (socket) => {
   // --- 部屋作成 / 再アタッチ ---
   socket.on('createRoom', (_payload, ack) => {
+    const ip = clientIpFromSocket(socket);
+    if (!checkRateLimit(`create:${ip}`, 20, 60 * 60 * 1000)) {
+      return ack && ack({ ok: false, error: 'rate_limited' });
+    }
+    if (rooms.size >= MAX_ROOMS) {
+      return ack && ack({ ok: false, error: 'server_busy' });
+    }
     const room = makeRoom(socket.id);
     socket.join(room.code);
     socket.data.role = 'host';
@@ -1195,9 +1049,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('joinRoom', ({ code, nickname }, ack) => {
+    const ip = clientIpFromSocket(socket);
+    if (!checkRateLimit(`join:${ip}`, 60, 60 * 1000)) {
+      return ack && ack({ ok: false, error: 'rate_limited' });
+    }
     const room = rooms.get(String(code));
     if (!room) return ack && ack({ ok: false, error: 'room_not_found' });
-    const nick = String(nickname || '').trim().slice(0, 20) || `名無し`;
+    if (room.players.size >= MAX_PLAYERS_PER_ROOM) {
+      return ack && ack({ ok: false, error: 'room_full' });
+    }
+    const nick = sanitizeNickname(nickname);
     // 同名のプレイヤーが既に居れば、その情報（スコア等）を引き継いで socketId を更新
     let preservedScore = 0;
     let preservedHeld = {};
@@ -1347,7 +1208,6 @@ io.on('connection', (socket) => {
     const q = room.questions[i];
     room.currentIndex = i;
     room.question = q.text || '';
-    room.image = q.image || '';
     room.revealIndex = 0;
     resetBuzzesAndAnswer(room);
     clearAutoAdvance(room);
@@ -1356,11 +1216,10 @@ io.on('connection', (socket) => {
   });
 
   // 自由入力で出題（保存しない単発）
-  socket.on('host:setQuestionText', ({ code, text, image }, ack) => {
+  socket.on('host:setQuestionText', ({ code, text }, ack) => {
     const room = resolveHostRoom(socket, code);
     if (!room) return ack && ack({ ok: false, error: 'not_host' });
-    room.question = String(text || '');
-    room.image = String(image || '');
+    room.question = String(text || '').slice(0, 2000);
     room.revealIndex = 0;
     room.questionStartedAt = null;
     room.currentIndex = -1;
@@ -1408,18 +1267,15 @@ io.on('connection', (socket) => {
       const q = room.questions[next];
       room.currentIndex = next;
       room.question = q.text || '';
-      room.image = q.image || '';
       room.revealIndex = 0;
       room.questionStartedAt = null;
       io.to(room.code).emit('questionPrepared', {
         length: room.question.length,
-        image: room.image,
         index: next
       });
     } else {
       room.currentIndex = -1;
       room.question = '';
-      room.image = '';
       room.revealIndex = 0;
       room.questionStartedAt = null;
       io.to(room.code).emit('nextQuestion');
@@ -1510,7 +1366,6 @@ io.on('connection', (socket) => {
     room.qNumber = 0;
     room.currentIndex = -1;
     room.question = '';
-    room.image = '';
     room.revealIndex = 0;
     room.questionStartedAt = null;
     room.buzzes = [];

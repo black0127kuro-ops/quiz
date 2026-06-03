@@ -20,7 +20,7 @@
     const el = document.activeElement;
     if (!el) return false;
     return el === editText || el === editAnswer || el === editExplanation
-      || el === editPoints || el === editImageUrl;
+      || el === editPoints;
   }
 
   /** サーバーからの一覧同期（入力中の上書きはしない） */
@@ -68,7 +68,6 @@
   const caretEl = document.getElementById('caret');
   const phaseLabel = document.getElementById('phase-label');
   const qIndexEl = document.getElementById('q-index');
-  const stageImage = document.getElementById('stage-image');
   const rankingList = document.getElementById('ranking-list');
   const scoreList = document.getElementById('score-list');
   const playersList = document.getElementById('players-list');
@@ -84,9 +83,6 @@
   const editAnswer = document.getElementById('edit-answer');
   const editPoints = document.getElementById('edit-points');
   const editExplanation = document.getElementById('edit-explanation');
-  const editImageUrl = document.getElementById('edit-image-url');
-  const editImagePreview = document.getElementById('edit-image-preview');
-  const imageFileInput = document.getElementById('image-file');
 
   const answerBanner = document.getElementById('answer-banner-host');
   const whoEl = document.getElementById('who-host');
@@ -153,7 +149,6 @@
       const ptsVal = (Number.isFinite(Number(q.points)) ? Number(q.points) : 1);
       row.innerHTML = `
         <div class="num">${i + 1}${asked ? ' <span class="asked-badge" title="出題済み">✓</span>' : ''}</div>
-        <div>${q.image ? `<img class="thumb" src="${escapeAttr(q.image)}" alt="">` : `<div class="thumb"></div>`}</div>
         <div class="body">
           <div class="text">${escapeHtml(q.text || '(未入力)')}</div>
           <div class="answer">正解: ${escapeHtml(q.answer || '(未設定)')}</div>
@@ -247,14 +242,6 @@
     editAnswer.value = q.answer || '';
     editPoints.value = (Number.isFinite(Number(q.points)) ? Number(q.points) : 1);
     editExplanation.value = q.explanation || '';
-    editImageUrl.value = q.image || '';
-    if (q.image) {
-      editImagePreview.src = q.image;
-      editImagePreview.classList.add('show');
-    } else {
-      editImagePreview.classList.remove('show');
-      editImagePreview.removeAttribute('src');
-    }
   }
 
   function readEditorFieldsIntoModel() {
@@ -266,7 +253,6 @@
     const ptsRaw = Number(editPoints.value);
     q.points = Number.isFinite(ptsRaw) ? Math.max(-99, Math.min(999, Math.round(ptsRaw))) : 1;
     q.explanation = editExplanation.value;
-    q.image = editImageUrl.value;
   }
   function syncEditorToModel() {
     readEditorFieldsIntoModel();
@@ -297,45 +283,11 @@
   editPoints.addEventListener('change', syncEditorToModel);
   editExplanation.addEventListener('input', syncEditorToModelNoPush);
   editExplanation.addEventListener('change', syncEditorToModel);
-  editImageUrl.addEventListener('input', () => {
-    if (editImageUrl.value) {
-      editImagePreview.src = editImageUrl.value;
-      editImagePreview.classList.add('show');
-    } else {
-      editImagePreview.classList.remove('show');
-    }
-    syncEditorToModel();
-  });
-
-  document.getElementById('btn-upload-image').addEventListener('click', () => imageFileInput.click());
-  document.getElementById('btn-clear-image').addEventListener('click', () => {
-    editImageUrl.value = '';
-    editImagePreview.classList.remove('show');
-    syncEditorToModel();
-  });
-  imageFileInput.addEventListener('change', async () => {
-    const f = imageFileInput.files && imageFileInput.files[0];
-    if (!f) return;
-    const fd = new FormData();
-    fd.append('file', f);
-    const r = await fetch('/api/upload/image', { method: 'POST', body: fd });
-    const j = await r.json();
-    if (j.ok) {
-      editImageUrl.value = j.url;
-      editImagePreview.src = j.url;
-      editImagePreview.classList.add('show');
-      syncEditorToModel();
-    } else {
-      alert('画像アップロード失敗: ' + (j.error || ''));
-    }
-    imageFileInput.value = '';
-  });
 
   document.getElementById('btn-add-question').addEventListener('click', () => {
     questions.push({
       id: 'q' + Math.random().toString(36).slice(2, 10),
       text: '',
-      image: '',
       answer: '',
       explanation: '',
       points: 1
@@ -368,18 +320,27 @@
     renderQList();
     loadEditor();
   });
-  document.getElementById('btn-save-set').addEventListener('click', async () => {
+  document.getElementById('btn-save-set').addEventListener('click', () => {
+    if (!window.QuizSetsStore) {
+      alert('問題セット機能を読み込めませんでした。ページを再読み込みしてください。');
+      return;
+    }
+    readEditorFieldsIntoModel();
     const name = prompt('セット名を入力してください:', `クイズ ${new Date().toLocaleString('ja-JP')}`);
     if (!name) return;
-    const r = await fetch('/api/sets', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, questions })
-    });
-    const j = await r.json();
-    if (j.ok) alert('セットを保存しました。');
-    else alert('保存失敗');
+    QuizSetsStore.save(name, questions);
+    alert('このブラウザにセットを保存しました（サーバーには送信しません）。');
   });
+
+  function downloadJsonFile(filename, data) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   function pushQuestions(callback) {
     if (!roomCode) {
@@ -418,16 +379,16 @@
     });
   });
   document.getElementById('btn-refresh-sets').addEventListener('click', refreshSets);
-  async function refreshSets() {
-    const r = await fetch('/api/sets');
-    const j = await r.json();
+  function refreshSets() {
+    if (!window.QuizSetsStore) return;
+    const sets = QuizSetsStore.list();
     const list = document.getElementById('set-list');
     list.innerHTML = '';
-    if (!j.ok || !j.sets.length) {
-      list.innerHTML = '<p class="muted-note">— 保存済みセットはありません —</p>';
+    if (!sets.length) {
+      list.innerHTML = '<p class="muted-note">— このブラウザに保存済みセットはありません —</p>';
       return;
     }
-    j.sets.forEach(s => {
+    sets.forEach(s => {
       const it = document.createElement('div');
       it.className = 'item';
       it.innerHTML = `
@@ -441,65 +402,72 @@
         <button class="btn small danger" data-act="del" data-id="${s.id}">削除</button>`;
       list.appendChild(it);
     });
-    list.onclick = async (e) => {
+    list.onclick = (e) => {
       const t = e.target.closest('button[data-act]');
       if (!t) return;
       const id = t.getAttribute('data-id');
       const act = t.getAttribute('data-act');
       if (act === 'load') {
-        const rr = await fetch(`/api/sets/${id}`);
-        const jj = await rr.json();
-        if (jj.ok) {
-          questions = (jj.set.questions || []).map(q => ({ ...q }));
-          selectedIdx = -1;
-          pushQuestions();
-          renderQList();
-          loadEditor();
-          closeModal('modal-sets');
-        }
+        const set = QuizSetsStore.get(id);
+        if (!set) return;
+        questions = set.questions.map(q => ({ ...q }));
+        selectedIdx = -1;
+        pushQuestions();
+        renderQList();
+        loadEditor();
+        closeModal('modal-sets');
       } else if (act === 'export') {
-        window.open(`/api/sets/${id}/export`, '_blank');
+        const data = QuizSetsStore.exportJson(id);
+        if (!data) return;
+        downloadJsonFile(`quiz-set-${id}.json`, data);
       } else if (act === 'rename') {
         const name = prompt('新しい名前:');
         if (!name) return;
-        await fetch(`/api/sets/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
-        });
-        await refreshSets();
+        QuizSetsStore.update(id, { name });
+        refreshSets();
       } else if (act === 'del') {
         if (!confirm('このセットを削除しますか？')) return;
-        await fetch(`/api/sets/${id}`, { method: 'DELETE' });
-        await refreshSets();
+        QuizSetsStore.remove(id);
+        refreshSets();
       }
     };
   }
 
-  // import
-  document.getElementById('btn-do-import').addEventListener('click', async () => {
+  async function parseImportFile() {
     const f = document.getElementById('import-file').files[0];
-    const notice = document.getElementById('import-notice');
-    if (!f) { notice.textContent = 'JSONファイルを選択してください。'; return; }
-    notice.textContent = '読込中...';
+    if (!f) return null;
     const txt = await f.text();
-    let obj;
-    try { obj = JSON.parse(txt); } catch { notice.textContent = 'JSONとして読めませんでした。'; return; }
-    const name = document.getElementById('import-name').value || (obj.name || f.name.replace(/\.json$/i, ''));
-    const r = await fetch('/api/sets/import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, questions: obj.questions || [] })
-    });
-    const j = await r.json();
-    if (j.ok) {
-      notice.textContent = 'インポートしました。';
-      document.getElementById('import-file').value = '';
-      document.getElementById('import-name').value = '';
-      await refreshSets();
-    } else {
-      notice.textContent = '失敗: ' + (j.error || '');
+    try {
+      return JSON.parse(txt);
+    } catch {
+      return null;
     }
+  }
+
+  document.getElementById('btn-do-import').addEventListener('click', async () => {
+    const notice = document.getElementById('import-notice');
+    const obj = await parseImportFile();
+    if (!obj) { notice.textContent = 'JSONファイルを選択するか、形式を確認してください。'; return; }
+    const f = document.getElementById('import-file').files[0];
+    const name = document.getElementById('import-name').value || (obj.name || f.name.replace(/\.json$/i, ''));
+    QuizSetsStore.importSet(name, obj.questions || []);
+    notice.textContent = 'このブラウザに保存しました。';
+    document.getElementById('import-file').value = '';
+    document.getElementById('import-name').value = '';
+    refreshSets();
+  });
+
+  document.getElementById('btn-import-to-list').addEventListener('click', async () => {
+    const notice = document.getElementById('import-notice');
+    const obj = await parseImportFile();
+    if (!obj) { notice.textContent = 'JSONファイルを選択するか、形式を確認してください。'; return; }
+    questions = QuizSetsStore.normalizeQuestions(obj.questions || []);
+    selectedIdx = -1;
+    pushQuestions();
+    renderQList();
+    loadEditor();
+    notice.textContent = '出題リストに読み込みました。';
+    closeModal('modal-sets');
   });
 
   // ===== 効果音設定モーダル =====
@@ -616,7 +584,7 @@
       // フリー入力（リスト未使用）想定: テキストフィールドの内容で
       const txt = editText.value;
       if (!txt) { alert('問題を選択するか、編集欄に入力してください。'); return; }
-      hostEmit('host:setQuestionText', { text: txt, image: editImageUrl.value }, () => {
+      hostEmit('host:setQuestionText', { text: txt }, () => {
         hostStartQuestionFree();
       });
     }
@@ -1096,13 +1064,6 @@
     if (!titleActive && !revealReplayTimer) {
       typedEl.textContent = state.questionVisible || '';
     }
-    if (state.image) {
-      stage.classList.add('has-image');
-      stageImage.src = state.image;
-    } else {
-      stage.classList.remove('has-image');
-      stageImage.removeAttribute('src');
-    }
     if (state.revealing) {
       caretEl.style.display = 'inline-block'; stage.classList.remove('paused');
       phaseLabel.textContent = '出題中';
@@ -1158,7 +1119,7 @@
     stage.classList.add('paused');
     phaseLabel.textContent = '早押し受付';
   });
-  socket.on('questionStart', ({ image, qIndex, qNumber }) => {
+  socket.on('questionStart', ({ qIndex, qNumber }) => {
     if (typeof qNumber === 'number' && qNumber >= 1) {
       hostItemsState.configLocked = true;
       renderHostItemsConfig();
@@ -1168,8 +1129,6 @@
     caretEl.style.display = 'none';
     stage.classList.remove('paused');
     phaseLabel.textContent = '出題中';
-    if (image) { stage.classList.add('has-image'); stageImage.src = image; }
-    else { stage.classList.remove('has-image'); stageImage.removeAttribute('src'); }
     // 出題済み表示（state 到着前でもリストに反映）
     if (typeof qIndex === 'number' && qIndex >= 0) {
       hostCurrentIndex = qIndex;
@@ -1196,19 +1155,15 @@
     caretEl.style.display = 'inline-block'; stage.classList.remove('paused');
     phaseLabel.textContent = '出題中';
   });
-  socket.on('questionPrepared', ({ image }) => {
+  socket.on('questionPrepared', () => {
     typedEl.textContent = '';
     caretEl.style.display = 'none';
     clearRevealQueue();
-    if (image) { stage.classList.add('has-image'); stageImage.src = image; }
-    else { stage.classList.remove('has-image'); stageImage.removeAttribute('src'); }
     phaseLabel.textContent = '次の問題';
   });
   socket.on('nextQuestion', () => {
     typedEl.textContent = '';
     caretEl.style.display = 'none';
-    stage.classList.remove('has-image');
-    stageImage.removeAttribute('src');
     clearRevealQueue();
     phaseLabel.textContent = '待機中';
   });
@@ -1284,8 +1239,6 @@
     resultsSuspense.innerHTML = '';
     typedEl.textContent = '';
     caretEl.style.display = 'none';
-    stage.classList.remove('has-image');
-    stageImage.removeAttribute('src');
     phaseLabel.textContent = '待機中';
     qIndexEl.textContent = '';
     document.getElementById('explanation-banner').classList.remove('show');

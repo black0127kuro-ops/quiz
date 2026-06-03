@@ -34,6 +34,7 @@
         <li><a href="#player">参加者の操作</a></li>
         <li><a href="#items">お助けアイテム</a></li>
         <li><a href="#faq">よくある質問</a></li>
+        <li><a href="/terms.html">利用規約</a></li>
       </ol>
     </nav>
 
@@ -103,9 +104,9 @@
 
       <h3>問題の用意</h3>
       <ul class="guide-list">
-        <li><strong>問題リスト</strong> … 左側の一覧から問題を選び、問題文・正解メモ・配点・解説・画像を編集</li>
+        <li><strong>問題リスト</strong> … 左側の一覧から問題を選び、問題文・正解メモ・配点・解説を編集</li>
         <li><strong>＋ 新規追加</strong> … 問題を増やす</li>
-        <li><strong>問題セット管理</strong> … まとまった問題を保存・読み込み・エクスポート（次回以降も使える）</li>
+        <li><strong>問題セット管理</strong> … まとまった問題を<strong>お使いのブラウザに</strong>保存・読み込み・エクスポート（サーバーには送信しません）</li>
         <li><strong>出題済み</strong> … すでに出した問題には印が付きます</li>
       </ul>
 
@@ -169,7 +170,7 @@
 
       <h3>画面の見方</h3>
       <ul class="guide-list">
-        <li><strong>出題エリア</strong> … 主催者と同じ問題文が流れる（画像付き問題もあり）</li>
+        <li><strong>出題エリア</strong> … 主催者と同じ問題文が1文字ずつ流れる</li>
         <li><strong>早押しランキング</strong> … 誰が何位で押したか・回答中の人</li>
         <li><strong>スコア</strong> … 主催者が ON にしているときだけ表示</li>
         <li><strong>お知らせ</strong> … アイテムの配布・使用など（青＝全体、赤＝自分だけ）</li>
@@ -218,6 +219,12 @@
 
         <dt>スマホで主催できる？</dt>
         <dd>可能ですが、問題編集や配布操作はパソコンの方がやりやすいです。進行だけならスマホでもできます。</dd>
+
+        <dt>画像は使える？</dt>
+        <dd>いいえ。第三者コンテンツをサーバーに保存しないため、画像の添付・アップロード機能はありません。</dd>
+
+        <dt>問題セットはどこに保存される？</dt>
+        <dd>主催者が使っているブラウザの localStorage のみです。別の端末やブラウザでは表示されません。バックアップは「エクスポート」で JSON を保存してください。</dd>
       </dl>
     </section>
 
@@ -225,6 +232,15 @@
       <a href="/" class="btn">トップへ戻って部屋を作る / 参加する</a>
     </footer>
   </div>
+
+  <footer class="site-footer">
+    <nav class="site-footer-nav" aria-label="フッターナビ">
+      <a href="/terms.html">利用規約</a>
+      <a href="/guide.html">使い方</a>
+      <a href="/">トップ</a>
+    </nav>
+    <p class="site-footer-copy">早押しクイズ（個人運営）</p>
+  </footer>
 
   <script src="/items-catalog.js"></script>
   <script>

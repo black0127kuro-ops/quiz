@@ -26,7 +26,6 @@
     <div class="stage" id="stage">
       <div class="phase-label" id="phase-label">待機中</div>
       <div class="q-index" id="q-index"></div>
-      <div class="image-wrap"><img id="stage-image" alt="" /></div>
       <div class="text-wrap">
         <span class="typed" id="typed"></span><span class="caret" id="caret" style="display:none;"></span>
       </div>
@@ -81,14 +80,6 @@
           <input id="edit-points" type="number" min="-99" max="999" step="1" value="1" />
           <label>解説（出題中は表示されません。正解/不正解のあと解説バナーに出ます）</label>
           <textarea id="edit-explanation" class="question" style="min-height:70px;" placeholder="例: 標高3,776m。山梨県と静岡県にまたがる。"></textarea>
-          <label>画像（任意・対応形式: png/jpg/gif/webp/svg）</label>
-          <div class="row">
-            <input id="edit-image-url" type="text" placeholder="画像URL or アップロード" style="flex:1 1 200px;" />
-            <button id="btn-upload-image" class="btn small secondary" type="button">画像アップロード</button>
-            <input id="image-file" type="file" accept="image/*" style="display:none;" />
-            <button id="btn-clear-image" class="btn small ghost" type="button">画像クリア</button>
-          </div>
-          <img id="edit-image-preview" class="img-preview" alt="" />
         </div>
         <p id="q-edit-empty" class="muted-note">問題リストから選んで編集してください。</p>
       </div>
@@ -166,6 +157,15 @@
     </p>
   </div>
 
+  <footer class="site-footer">
+    <nav class="site-footer-nav" aria-label="フッターナビ">
+      <a href="/terms.html">利用規約</a>
+      <a href="/guide.html">使い方</a>
+      <a href="/">トップ</a>
+    </nav>
+    <p class="site-footer-copy">早押しクイズ（個人運営）</p>
+  </footer>
+
   <!-- ===== 問題セット管理モーダル ===== -->
   <div id="modal-sets" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal">
@@ -179,18 +179,19 @@
         <button id="btn-refresh-sets" class="btn small ghost" type="button">更新</button>
         <div id="set-list" class="set-list" style="margin-top:10px;"></div>
         <p class="muted-note" style="margin-top:10px;">
-          ・「読込」で現在のリストに置き換えます。<br>
-          ・「エクスポート」は画像を含む単一JSONをダウンロードします（別環境への引っ越しに使えます）。
+          ・保存データは<strong>このブラウザ内のみ</strong>（サーバーには送信しません）。<br>
+          ・「読込」で現在のリストに置き換えます。「エクスポート」は JSON をダウンロードします。
         </p>
       </div>
 
       <div class="tab-pane" data-pane="import" style="display:none;">
         <label>セット名（任意・空ならファイル名から）</label>
         <input id="import-name" type="text" placeholder="例: 雑学クイズ Vol.1" />
-        <label>JSONファイル（このアプリでエクスポートした形式）</label>
+        <label>JSONファイル（エクスポートした形式・旧版の画像フィールドは無視されます）</label>
         <input id="import-file" type="file" accept="application/json" />
         <div class="row" style="margin-top:10px;">
-          <button id="btn-do-import" class="btn">インポート実行</button>
+          <button id="btn-do-import" class="btn">ブラウザに保存</button>
+          <button id="btn-import-to-list" class="btn secondary" type="button">リストに直接読込</button>
         </div>
         <p id="import-notice" class="muted-note"></p>
       </div>
@@ -263,6 +264,7 @@
   <script src="/sound.js"></script>
   <script src="/presets.js"></script>
   <script src="/items-catalog.js"></script>
+  <script src="/quiz-sets-store.js"></script>
   <script src="/host.js"></script>
 </body>
 </html>

@@ -12,7 +12,12 @@
 
   socket.emit('joinRoom', { code, nickname: nick }, (res) => {
     if (!res || !res.ok) {
-      alert('部屋への参加に失敗しました。');
+      const msg = res && res.error === 'room_full'
+        ? 'この部屋は定員に達しています。'
+        : res && res.error === 'rate_limited'
+          ? '参加の試行回数が多すぎます。しばらく待ってからお試しください。'
+          : '部屋への参加に失敗しました。';
+      alert(msg);
       location.href = '/';
     }
   });
@@ -226,7 +231,6 @@
   const caretEl = document.getElementById('caret');
   const phaseLabel = document.getElementById('phase-label');
   const qIndexEl = document.getElementById('q-index');
-  const stageImage = document.getElementById('stage-image');
   const buzzBtn = document.getElementById('buzz');
   const rankingList = document.getElementById('ranking-list');
   const scoreList = document.getElementById('score-list');
@@ -312,13 +316,6 @@
 
     if (!titleActive && !revealReplayTimer) {
       typedEl.textContent = state.questionVisible || '';
-    }
-    if (state.image) {
-      stage.classList.add('has-image');
-      stageImage.src = state.image;
-    } else {
-      stage.classList.remove('has-image');
-      stageImage.removeAttribute('src');
     }
 
     if (state.revealing) {
@@ -437,7 +434,7 @@
     stage.classList.add('paused');
     phaseLabel.textContent = '早押し受付中';
   });
-  socket.on('questionStart', ({ image, qIndex, qNumber, itemEffects }) => {
+  socket.on('questionStart', ({ qIndex, qNumber, itemEffects }) => {
     hideExplanationBanner();
     if (flashTimer) clearTimeout(flashTimer);
     myItemEffects = itemEffects || { delayMs: 0, flip: false, mirror: false, flash: false, slow2x: false, fullText: '', answerMs: 10000 };
@@ -447,8 +444,6 @@
     caretEl.style.display = 'none';
     stage.classList.remove('paused');
     phaseLabel.textContent = '出題中';
-    if (image) { stage.classList.add('has-image'); stageImage.src = image; }
-    else { stage.classList.remove('has-image'); stageImage.removeAttribute('src'); }
     showTitleOverlay(qNumber, onTitleRevealReady);
     if (typeof qNumber === 'number' && qNumber > 0) {
       qIndexEl.textContent = `第${toFullWidth(qNumber)}問`;
@@ -460,12 +455,10 @@
     caretEl.style.display = 'inline-block'; stage.classList.remove('paused');
     phaseLabel.textContent = '出題中';
   });
-  socket.on('questionPrepared', ({ image }) => {
+  socket.on('questionPrepared', () => {
     typedEl.textContent = '';
     caretEl.style.display = 'none';
     clearRevealQueue();
-    if (image) { stage.classList.add('has-image'); stageImage.src = image; }
-    else { stage.classList.remove('has-image'); stageImage.removeAttribute('src'); }
     phaseLabel.textContent = '次の問題';
   });
   socket.on('nextQuestion', () => {
@@ -473,8 +466,6 @@
     applyItemVisuals();
     typedEl.textContent = '';
     caretEl.style.display = 'none';
-    stage.classList.remove('has-image');
-    stageImage.removeAttribute('src');
     clearRevealQueue();
     phaseLabel.textContent = '待機中';
     renderItemsGrid();
@@ -539,8 +530,6 @@
     confettiEl.innerHTML = '';
     typedEl.textContent = '';
     caretEl.style.display = 'none';
-    stage.classList.remove('has-image');
-    stageImage.removeAttribute('src');
     phaseLabel.textContent = '待機中';
     qIndexEl.textContent = '';
     document.getElementById('explanation-banner').classList.remove('show');

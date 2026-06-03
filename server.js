@@ -80,13 +80,26 @@ app.use('/api/sets', (_req, res) => {
   res.status(410).json({ ok: false, error: 'sets_api_removed_use_browser_storage' });
 });
 
-app.use(express.static(PUBLIC_DIR));
+function sendPublicHtml(res, filename) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.sendFile(path.join(PUBLIC_DIR, filename));
+}
 
-app.get('/', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
-app.get('/guide', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'guide.html')));
-app.get('/terms', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'terms.html')));
-app.get('/host', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'host.html')));
-app.get('/player', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'player.html')));
+app.use(express.static(PUBLIC_DIR, {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    }
+  }
+}));
+
+app.get('/', (_req, res) => sendPublicHtml(res, 'index.html'));
+app.get('/guide', (_req, res) => sendPublicHtml(res, 'guide.html'));
+app.get('/terms', (_req, res) => sendPublicHtml(res, 'terms.html'));
+app.get('/host', (_req, res) => sendPublicHtml(res, 'host.html'));
+app.get('/player', (_req, res) => sendPublicHtml(res, 'player.html'));
 
 // ----------------------------------------------------------------------
 // レート制限（メモリ内・単一プロセス向け）

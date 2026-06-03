@@ -1311,7 +1311,17 @@ io.on('connection', (socket) => {
     const room = resolveHostRoom(socket, code);
     if (!room) return;
     for (const p of room.players.values()) p.score = 0;
+    room.qNumber = 0;
+    room.itemsConfigLocked = false;
     broadcastState(room);
+    if (room.hostId) {
+      io.to(room.hostId).emit('itemHostState', {
+        enabled: room.itemsEnabled === true,
+        configLocked: false,
+        enabledIds: Array.from(room.enabledItems || DEFAULT_ENABLED_ITEMS),
+        feed: (room.itemFeed || []).slice(-20)
+      });
+    }
   });
   socket.on('host:adjustScore', ({ code, socketId, delta }) => {
     const room = resolveHostRoom(socket, code);

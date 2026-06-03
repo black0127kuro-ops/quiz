@@ -595,7 +595,7 @@
     hostEmit('host:wrong');
   });
   document.getElementById('btn-reset-scores').addEventListener('click', () => {
-    if (!confirm('スコアを全員 0 にリセットしますか？')) return;
+    if (!confirm('スコアを 0 にし、問題数（第○問）もリセットします。\nお助けアイテムの種類を再度変更できるようになります。よろしいですか？')) return;
     hostEmit('host:resetScores');
   });
 
@@ -694,7 +694,10 @@
   function syncHostItemsFromState(state) {
     if (!state) return;
     if (state.itemsEnabled === true) hostItemsState.enabled = true;
-    if (state.itemsConfigLocked === true && !hostItemsState.configLocked) {
+    if (state.itemsConfigLocked === false) {
+      hostItemsState.configLocked = false;
+      renderHostItemsConfig();
+    } else if (state.itemsConfigLocked === true && !hostItemsState.configLocked) {
       hostItemsState.configLocked = true;
       if (state.itemsEnabled === false) hostItemsState.enabled = false;
       renderHostItemsConfig();

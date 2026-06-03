@@ -16,10 +16,35 @@
     if (typeof ack === 'function') socket.emit(event, payload, ack);
     else socket.emit(event, payload);
   }
+  function isQuestionEditorFocused() {
+    const el = document.activeElement;
+    if (!el) return false;
+    return el === editText || el === editAnswer || el === editExplanation
+      || el === editPoints || el === editImageUrl;
+  }
+
   function applyQuestionsFromServer(list) {
+    const keepEditor = isQuestionEditorFocused();
+    const snap = keepEditor && selectedIdx >= 0 ? {
+      text: editText.value,
+      answer: editAnswer.value,
+      explanation: editExplanation.value,
+      points: editPoints.value,
+      image: editImageUrl.value
+    } : null;
     questions = (list || []).map(q => ({ ...q }));
+    if (snap && questions[selectedIdx]) {
+      const ptsRaw = Number(snap.points);
+      Object.assign(questions[selectedIdx], {
+        text: snap.text,
+        answer: snap.answer,
+        explanation: snap.explanation,
+        points: Number.isFinite(ptsRaw) ? Math.max(-99, Math.min(999, Math.round(ptsRaw))) : 1,
+        image: snap.image
+      });
+    }
     renderQList();
-    if (selectedIdx >= 0 && selectedIdx < questions.length) loadEditor();
+    if (!keepEditor && selectedIdx >= 0 && selectedIdx < questions.length) loadEditor();
   }
   function onHostRoomReady(res) {
     if (!res || !res.ok) return;
@@ -117,6 +142,9 @@
   }
   let questions = [];
   let selectedIdx = -1;
+  let editTextComposing = false;
+  let pushQuestionsTimer = null;
+  let renderQListTimer = null;
   let hostCurrentIndex = -1;
 
   function unlockSound() { window.QuizSound && QuizSound.unlock(); }
@@ -182,6 +210,7 @@
     const i = Number(t.getAttribute('data-i'));
     const act = t.getAttribute('data-act');
     if (act === 'edit') {
+      flushEditorSync();
       selectedIdx = i;
       loadEditor();
     } else if (act === 'del') {
@@ -229,7 +258,7 @@
     }
   }
 
-  function syncEditorToModel() {
+  function readEditorFieldsIntoModel() {
     if (selectedIdx < 0) return;
     const q = questions[selectedIdx];
     if (!q) return;
@@ -239,21 +268,63 @@
     q.points = Number.isFinite(ptsRaw) ? Math.max(-99, Math.min(999, Math.round(ptsRaw))) : 1;
     q.explanation = editExplanation.value;
     q.image = editImageUrl.value;
-    pushQuestions();
-    renderQList();
+  }
+  function scheduleRenderQList() {
+    if (renderQListTimer) clearTimeout(renderQListTimer);
+    renderQListTimer = setTimeout(() => {
+      renderQListTimer = null;
+      renderQList();
+    }, 200);
+  }
+  function schedulePushQuestions() {
+    if (!roomCode) return;
+    if (pushQuestionsTimer) clearTimeout(pushQuestionsTimer);
+    pushQuestionsTimer = setTimeout(() => {
+      pushQuestionsTimer = null;
+      pushQuestions();
+    }, 450);
+  }
+  function flushEditorSync() {
+    readEditorFieldsIntoModel();
+    if (renderQListTimer) {
+      clearTimeout(renderQListTimer);
+      renderQListTimer = null;
+      renderQList();
+    }
+    if (pushQuestionsTimer) {
+      clearTimeout(pushQuestionsTimer);
+      pushQuestionsTimer = null;
+      pushQuestions();
+    }
+  }
+  function syncEditorToModel() {
+    readEditorFieldsIntoModel();
+    scheduleRenderQList();
+    schedulePushQuestions();
   }
   function syncEditorToModelNoPush() {
-    if (selectedIdx < 0) return;
-    const q = questions[selectedIdx];
-    if (!q) return;
-    q.text = editText.value;
-    q.answer = editAnswer.value;
-    const ptsRaw = Number(editPoints.value);
-    q.points = Number.isFinite(ptsRaw) ? Math.max(-99, Math.min(999, Math.round(ptsRaw))) : 1;
-    q.explanation = editExplanation.value;
-    q.image = editImageUrl.value;
+    readEditorFieldsIntoModel();
+    scheduleRenderQList();
   }
-  editText.addEventListener('input', syncEditorToModel);
+  editText.addEventListener('compositionstart', () => { editTextComposing = true; });
+  editText.addEventListener('compositionend', () => {
+    editTextComposing = false;
+    if (selectedIdx >= 0 && questions[selectedIdx]) {
+      questions[selectedIdx].text = editText.value;
+    }
+    scheduleRenderQList();
+    schedulePushQuestions();
+  });
+  editText.addEventListener('input', () => {
+    if (selectedIdx < 0) return;
+    questions[selectedIdx].text = editText.value;
+    scheduleRenderQList();
+    if (!editTextComposing) schedulePushQuestions();
+  });
+  editText.addEventListener('blur', () => {
+    if (editTextComposing) return;
+    flushEditorSync();
+  });
   editAnswer.addEventListener('input', syncEditorToModelNoPush);
   editAnswer.addEventListener('change', syncEditorToModel);
   editPoints.addEventListener('input', syncEditorToModel);

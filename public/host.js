@@ -23,28 +23,15 @@
       || el === editPoints || el === editImageUrl;
   }
 
-  function applyQuestionsFromServer(list) {
-    const keepEditor = isQuestionEditorFocused();
-    const snap = keepEditor && selectedIdx >= 0 ? {
-      text: editText.value,
-      answer: editAnswer.value,
-      explanation: editExplanation.value,
-      points: editPoints.value,
-      image: editImageUrl.value
-    } : null;
-    questions = (list || []).map(q => ({ ...q }));
-    if (snap && questions[selectedIdx]) {
-      const ptsRaw = Number(snap.points);
-      Object.assign(questions[selectedIdx], {
-        text: snap.text,
-        answer: snap.answer,
-        explanation: snap.explanation,
-        points: Number.isFinite(ptsRaw) ? Math.max(-99, Math.min(999, Math.round(ptsRaw))) : 1,
-        image: snap.image
-      });
-    }
+  /** サーバーからの一覧同期（入力中の上書きはしない） */
+  function applyQuestionsFromServer(list, opts = {}) {
+    const incoming = (list || []).map(q => ({ ...q }));
+    if (!opts.force && incoming.length === 0 && questions.length > 0) return;
+    questions = incoming;
     renderQList();
-    if (!keepEditor && selectedIdx >= 0 && selectedIdx < questions.length) loadEditor();
+    if (!isQuestionEditorFocused() && selectedIdx >= 0 && selectedIdx < questions.length) {
+      loadEditor();
+    }
   }
   function onHostRoomReady(res) {
     if (!res || !res.ok) return;
@@ -142,9 +129,6 @@
   }
   let questions = [];
   let selectedIdx = -1;
-  let editTextComposing = false;
-  let pushQuestionsTimer = null;
-  let renderQListTimer = null;
   let hostCurrentIndex = -1;
 
   function unlockSound() { window.QuizSound && QuizSound.unlock(); }
@@ -165,6 +149,7 @@
       const row = document.createElement('div');
       const asked = askedIdxSet.has(i) || !!(q.id && askedIdSet.has(q.id));
       row.className = 'q-item' + (i === hostCurrentIndex ? ' current' : '') + (asked ? ' asked' : '');
+      row.dataset.qIdx = String(i);
       const ptsVal = (Number.isFinite(Number(q.points)) ? Number(q.points) : 1);
       row.innerHTML = `
         <div class="num">${i + 1}${asked ? ' <span class="asked-badge" title="出題済み">✓</span>' : ''}</div>
@@ -189,6 +174,18 @@
       qListEl.appendChild(row);
     });
   }
+  function updateListRowPreview(i) {
+    const row = qListEl.querySelector(`.q-item[data-q-idx="${i}"]`);
+    if (!row || !questions[i]) return;
+    const textEl = row.querySelector('.body .text');
+    if (textEl) textEl.textContent = questions[i].text || '(未入力)';
+  }
+  function renderQListHighlight() {
+    qListEl.querySelectorAll('.q-item[data-q-idx]').forEach(row => {
+      const i = Number(row.dataset.qIdx);
+      row.classList.toggle('current', i === hostCurrentIndex);
+    });
+  }
   qListEl.addEventListener('change', (e) => {
     const inp = e.target.closest('.pts-input');
     if (!inp) return;
@@ -210,7 +207,8 @@
     const i = Number(t.getAttribute('data-i'));
     const act = t.getAttribute('data-act');
     if (act === 'edit') {
-      flushEditorSync();
+      readEditorFieldsIntoModel();
+      pushQuestions();
       selectedIdx = i;
       loadEditor();
     } else if (act === 'del') {
@@ -231,7 +229,8 @@
       pushQuestions(); renderQList();
     } else if (act === 'play') {
       unlockSound();
-      hostStartQuestionAt(i);
+      readEditorFieldsIntoModel();
+      pushQuestions(() => hostStartQuestionAt(i));
     }
   });
 
@@ -269,61 +268,28 @@
     q.explanation = editExplanation.value;
     q.image = editImageUrl.value;
   }
-  function scheduleRenderQList() {
-    if (renderQListTimer) clearTimeout(renderQListTimer);
-    renderQListTimer = setTimeout(() => {
-      renderQListTimer = null;
-      renderQList();
-    }, 200);
-  }
-  function schedulePushQuestions() {
-    if (!roomCode) return;
-    if (pushQuestionsTimer) clearTimeout(pushQuestionsTimer);
-    pushQuestionsTimer = setTimeout(() => {
-      pushQuestionsTimer = null;
-      pushQuestions();
-    }, 450);
-  }
-  function flushEditorSync() {
-    readEditorFieldsIntoModel();
-    if (renderQListTimer) {
-      clearTimeout(renderQListTimer);
-      renderQListTimer = null;
-      renderQList();
-    }
-    if (pushQuestionsTimer) {
-      clearTimeout(pushQuestionsTimer);
-      pushQuestionsTimer = null;
-      pushQuestions();
-    }
-  }
   function syncEditorToModel() {
     readEditorFieldsIntoModel();
-    scheduleRenderQList();
-    schedulePushQuestions();
+    renderQList();
+    pushQuestions();
   }
   function syncEditorToModelNoPush() {
     readEditorFieldsIntoModel();
-    scheduleRenderQList();
+    if (selectedIdx >= 0) updateListRowPreview(selectedIdx);
   }
-  editText.addEventListener('compositionstart', () => { editTextComposing = true; });
-  editText.addEventListener('compositionend', () => {
-    editTextComposing = false;
-    if (selectedIdx >= 0 && questions[selectedIdx]) {
-      questions[selectedIdx].text = editText.value;
-    }
-    scheduleRenderQList();
-    schedulePushQuestions();
-  });
   editText.addEventListener('input', () => {
     if (selectedIdx < 0) return;
     questions[selectedIdx].text = editText.value;
-    scheduleRenderQList();
-    if (!editTextComposing) schedulePushQuestions();
+    updateListRowPreview(selectedIdx);
   });
   editText.addEventListener('blur', () => {
-    if (editTextComposing) return;
-    flushEditorSync();
+    readEditorFieldsIntoModel();
+    pushQuestions();
+  });
+  editText.addEventListener('change', () => {
+    readEditorFieldsIntoModel();
+    pushQuestions();
+    renderQList();
   });
   editAnswer.addEventListener('input', syncEditorToModelNoPush);
   editAnswer.addEventListener('change', syncEditorToModel);
@@ -415,14 +381,19 @@
     else alert('保存失敗');
   });
 
-  function pushQuestions() {
-    if (!roomCode) return;
+  function pushQuestions(callback) {
+    if (!roomCode) {
+      if (typeof callback === 'function') callback(false);
+      return;
+    }
+    readEditorFieldsIntoModel();
     hostEmit('host:setQuestions', { questions }, (res) => {
-      if (res && res.ok && Array.isArray(res.questions)) {
-        applyQuestionsFromServer(res.questions);
-      } else if (res && !res.ok) {
+      if (res && !res.ok) {
         alert('問題リストをサーバーに保存できませんでした。部屋番号を確認するか、ページを再読み込みしてください。');
+        if (typeof callback === 'function') callback(false);
+        return;
       }
+      if (typeof callback === 'function') callback(true);
     });
   }
 
@@ -638,8 +609,9 @@
 
   document.getElementById('btn-start').addEventListener('click', () => {
     unlockSound();
+    readEditorFieldsIntoModel();
     if (selectedIdx >= 0) {
-      hostStartQuestionAt(selectedIdx);
+      pushQuestions(() => hostStartQuestionAt(selectedIdx));
     } else {
       // フリー入力（リスト未使用）想定: テキストフィールドの内容で
       const txt = editText.value;
@@ -808,6 +780,10 @@
       index,
       itemsEnabled: cfg.itemsEnabled,
       enabledIds: cfg.enabledIds
+    }, (res) => {
+      if (res && !res.ok) {
+        alert('出題できませんでした。問題リストを確認してください。');
+      }
     });
   }
   function hostStartQuestionFree() {
@@ -1059,7 +1035,8 @@
       // 現在の問題を最初から流す
       e.preventDefault(); unlockSound();
       if (lastState && lastState.currentIndex >= 0) {
-        hostStartQuestionAt(lastState.currentIndex);
+        readEditorFieldsIntoModel();
+        pushQuestions(() => hostStartQuestionAt(lastState.currentIndex));
       }
       return;
     }
@@ -1093,7 +1070,8 @@
       }
       // それ以外（待機中）→ 選択中の問題を出題
       if (selectedIdx >= 0) {
-        hostStartQuestionAt(selectedIdx);
+        readEditorFieldsIntoModel();
+        pushQuestions(() => hostStartQuestionAt(selectedIdx));
       }
     }
   });
@@ -1147,7 +1125,8 @@
 
     renderRanking(state);
     renderScoreboard(state);
-    renderQList();
+    if (isQuestionEditorFocused()) renderQListHighlight();
+    else renderQList();
     if (sliderToMs(speedSlider.value) !== state.revealSpeed) {
       speedSlider.value = msToSlider(state.revealSpeed);
       speedVal.textContent = `${state.revealSpeed}ms/字`;
@@ -1157,9 +1136,9 @@
   });
 
   socket.on('host:state', (h) => {
-    // 問題リストは host:setQuestions の ack で同期（毎回の上書きで配点が 1 に戻るのを防ぐ）
     if (typeof h.currentIndex === 'number') hostCurrentIndex = h.currentIndex;
-    renderQList();
+    if (isQuestionEditorFocused()) renderQListHighlight();
+    else renderQList();
   });
 
   socket.on('reveal', ({ char }) => {
@@ -1202,7 +1181,8 @@
         if (!Array.isArray(lastState.askedIds)) lastState.askedIds = [];
         if (!lastState.askedIds.includes(q.id)) lastState.askedIds.push(q.id);
       }
-      renderQList();
+      if (isQuestionEditorFocused()) renderQListHighlight();
+      else renderQList();
     }
     // 「第N問」の大きなタイトル演出。タイトル終了までは reveal をバッファに溜める。
     showTitleOverlay(qNumber);

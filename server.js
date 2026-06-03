@@ -41,7 +41,7 @@ if (!fs.existsSync(SETS_FILE)) {
 }
 
 // ----------------------------------------------------------------------
-// .env 読み込み / サイト全体パスワード
+// .env 読み込み（任意）
 // ----------------------------------------------------------------------
 function loadEnvFile() {
   const envPath = path.join(ROOT, '.env');
@@ -62,85 +62,6 @@ function loadEnvFile() {
 }
 loadEnvFile();
 
-const SITE_PASSWORD = String(process.env.SITE_PASSWORD || '').trim();
-const AUTH_SECRET = process.env.AUTH_SECRET
-  || crypto.createHash('sha256').update(SITE_PASSWORD || 'quiz-local-dev').digest('hex');
-const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
-
-function parseCookies(header) {
-  const out = {};
-  if (!header) return out;
-  for (const part of header.split(';')) {
-    const eq = part.indexOf('=');
-    if (eq < 0) continue;
-    out[part.slice(0, eq).trim()] = decodeURIComponent(part.slice(eq + 1).trim());
-  }
-  return out;
-}
-
-function createSessionToken() {
-  const exp = Date.now() + SESSION_MAX_AGE_MS;
-  const payload = String(exp);
-  const sig = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('hex');
-  return `${payload}.${sig}`;
-}
-
-function verifySessionToken(token) {
-  if (!token) return false;
-  const [payload, sig] = String(token).split('.');
-  if (!payload || !sig) return false;
-  const expected = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('hex');
-  try {
-    const a = Buffer.from(sig, 'hex');
-    const b = Buffer.from(expected, 'hex');
-    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
-  } catch (_) {
-    return false;
-  }
-  const exp = parseInt(payload, 10);
-  return Number.isFinite(exp) && exp > Date.now();
-}
-
-function isRequestAuthed(req) {
-  if (!SITE_PASSWORD) return true;
-  const token = parseCookies(req.headers.cookie).quiz_session;
-  return verifySessionToken(token);
-}
-
-function buildSessionCookie(token) {
-  const secure = process.env.NODE_ENV === 'production';
-  const parts = [
-    `quiz_session=${encodeURIComponent(token)}`,
-    'Path=/',
-    'HttpOnly',
-    'SameSite=Lax',
-    `Max-Age=${Math.floor(SESSION_MAX_AGE_MS / 1000)}`
-  ];
-  if (secure) parts.push('Secure');
-  return parts.join('; ');
-}
-
-function siteAuth(req, res, next) {
-  if (!SITE_PASSWORD) return next();
-  if (
-    req.path === '/login.html'
-    || req.path === '/guide.html'
-    || req.path === '/guide'
-    || req.path === '/style.css'
-    || req.path === '/items-catalog.js'
-    || req.path === '/api/auth/login'
-    || req.path === '/api/auth/logout'
-  ) {
-    return next();
-  }
-  if (isRequestAuthed(req)) return next();
-  if (req.path.startsWith('/api/')) {
-    return res.status(401).json({ ok: false, error: 'auth_required' });
-  }
-  const nextUrl = encodeURIComponent(req.originalUrl || '/');
-  return res.redirect(`/login.html?next=${nextUrl}`);
-}
-
 // ----------------------------------------------------------------------
 // Express + Socket.IO
 // ----------------------------------------------------------------------
@@ -153,36 +74,7 @@ const io = new Server(server, {
   maxHttpBufferSize: 25e6 // base64インポート等での大きめのペイロードを許容
 });
 
-io.use((socket, next) => {
-  if (!SITE_PASSWORD) return next();
-  const token = parseCookies(socket.handshake.headers.cookie).quiz_session;
-  if (verifySessionToken(token)) return next();
-  next(new Error('Unauthorized'));
-});
-
 app.use(express.json({ limit: '25mb' }));
-
-app.get('/login.html', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'login.html')));
-
-app.post('/api/auth/login', (req, res) => {
-  if (!SITE_PASSWORD) {
-    res.setHeader('Set-Cookie', buildSessionCookie(createSessionToken()));
-    return res.json({ ok: true });
-  }
-  const pwd = String(req.body?.password || '');
-  if (pwd !== SITE_PASSWORD) {
-    return res.status(401).json({ ok: false, error: 'wrong_password' });
-  }
-  res.setHeader('Set-Cookie', buildSessionCookie(createSessionToken()));
-  return res.json({ ok: true });
-});
-
-app.post('/api/auth/logout', (_req, res) => {
-  res.setHeader('Set-Cookie', 'quiz_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
-  res.json({ ok: true });
-});
-
-app.use(siteAuth);
 app.use(express.static(PUBLIC_DIR));
 
 app.get('/', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
@@ -1771,6 +1663,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  const lock = SITE_PASSWORD ? 'パスワード保護: ON' : 'パスワード保護: OFF（SITE_PASSWORD 未設定）';
-  console.log(`[quiz-buzzer] http://localhost:${PORT} で起動しました（${lock}）`);
+  console.log(`[quiz-buzzer] http://localhost:${PORT} で起動しました`);
 });

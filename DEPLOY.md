@@ -1,27 +1,6 @@
 # インターネット公開の手順
 
-## 1. パスワード設定
-
-プロジェクト直下に `.env` を置きます（Git には含めません）。
-
-```env
-SITE_PASSWORD=imaizumi
-AUTH_SECRET=ここにランダムな長文字列
-NODE_ENV=production
-TRUST_PROXY=1
-```
-
-`AUTH_SECRET` は次のコマンドで生成できます。
-
-```powershell
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-未ログインの人は `/login.html` に誘導され、正しいパスワードで Cookie が付与されます。Socket.IO も同じ Cookie で保護されます。
-
-使い方ガイドは **`/guide.html`**（ログイン不要で閲覧可能。ゲーム本体はログイン後）。
-
-## 2. ローカルで確認
+## 1. ローカルで確認
 
 ```powershell
 cd "C:\Users\user\Documents\quiz HP"
@@ -29,9 +8,11 @@ npm install
 npm start
 ```
 
-ブラウザで `http://localhost:3000` を開き、ログイン画面 → パスワード入力後にトップが表示されれば OK です。
+ブラウザで `http://localhost:3000` を開き、トップから部屋作成・参加ができることを確認します。
 
-## 3. Render で公開（おすすめ・無料枠あり）
+使い方ガイドは **`/guide.html`** で閲覧できます。
+
+## 2. Render で公開（おすすめ・無料枠あり）
 
 1. [Render](https://render.com/) に GitHub 連携でログイン
 2. **New → Web Service** でこのリポジトリを選択
@@ -39,12 +20,12 @@ npm start
    - **Build Command:** `npm install`
    - **Start Command:** `npm start`
    - **Instance:** Free
-4. **Environment** に追加:
-   - `SITE_PASSWORD` = `imaizumi`（または変更後の値）
-   - `AUTH_SECRET` = ランダム文字列
+4. **Environment**（任意）:
    - `NODE_ENV` = `production`
    - `TRUST_PROXY` = `1`
-5. Deploy 後、表示された URL（例: `https://quiz-buzzer-xxxx.onrender.com`）にアクセス
+5. Deploy 後、表示された URL にアクセス
+
+**以前 `SITE_PASSWORD` を設定していた場合**は、Render の Environment から **削除**してください。残っていると再デプロイ後も鍵がかかることがあります。
 
 無料プランはしばらくアクセスがないとスリープします。初回表示が遅いことがあります。
 
@@ -52,18 +33,26 @@ npm start
 
 Render の無料ディスクは再起動で消えることがあります。問題セットを残したい場合は Render の **Disk** をマウントするか、有料 VPS を検討してください。
 
+## 3. 更新を反映する
+
+```powershell
+git add .
+git commit -m "変更内容の説明"
+git push origin main
+```
+
+Render の **Auto-Deploy** が ON なら、push 後に自動で再ビルドされます。
+
 ## 4. その他のホスティング
 
 | サービス | 手順の要点 |
 |---------|------------|
-| **Railway** | GitHub 連携 → `npm start` → 環境変数に `SITE_PASSWORD` 等 |
-| **Fly.io** | `fly launch` → `fly secrets set SITE_PASSWORD=...` |
-| **VPS** | Node 18+、`npm install`、`pm2 start server.js`、nginx で HTTPS リバースプロキシ |
+| **Railway** | GitHub 連携 → `npm start` |
+| **Fly.io** | `fly launch` → `npm start` |
+| **VPS** | Node 18+、`npm install`、`pm2 start server.js`、nginx で HTTPS |
 
-いずれも **HTTPS** 推奨です（Cookie の `Secure` が有効になります）。
+## 5. 運用の注意
 
-## 5. セキュリティ注意
-
-- `.env` を GitHub に push しない
-- 本番の `SITE_PASSWORD` は推測されにくいものに変更することを推奨
-- このロックは「知人向けの簡易ゲート」です。高度な攻撃向けの認証ではありません
+- 部屋番号を知っている人だけがそのクイズに参加できます（部屋単位の区切り）
+- 個人情報の収集は設計上不要ですが、ニックネームに本名を使わないよう周知するとより安全です
+- 公開 URL は必要な人にだけ共有してください

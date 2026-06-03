@@ -11,7 +11,3 @@ services:
         value: production
       - key: TRUST_PROXY
         value: "1"
-      - key: SITE_PASSWORD
-        sync: false
-      - key: AUTH_SECRET
-        generateValue: true

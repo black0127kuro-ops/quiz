@@ -59,6 +59,42 @@ a { color: var(--link); }
   text-shadow: 0 2px 0 rgba(255, 213, 132, 0.6);
 }
 .hero p { color: var(--muted); margin: 0; }
+.home-intro {
+  margin-bottom: 20px;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.home-intro-badge {
+  display: inline-block;
+  margin: 0 0 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #e8f8ee;
+  border: 1px solid #9fd4b0;
+  color: #117a3d;
+  font-size: 13px;
+  font-weight: 800;
+}
+.home-intro-lead {
+  margin: 0 0 14px;
+  line-height: 1.75;
+  font-size: 15px;
+  color: var(--text-2);
+}
+.home-intro-points {
+  margin: 0 0 14px;
+  padding-left: 1.3em;
+  display: grid;
+  gap: 10px;
+  line-height: 1.65;
+  font-size: 14px;
+}
+.home-intro-note {
+  margin: 0;
+  font-size: 13px;
+}
+.home-intro-note a { font-weight: 700; }
 .cards {
   display: grid;
   grid-template-columns: 1fr 1fr;

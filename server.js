@@ -12,6 +12,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const http = require('http');
 const crypto = require('crypto');
 const express = require('express');
@@ -1540,6 +1541,31 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`[quiz-buzzer] http://localhost:${PORT} で起動しました`);
+
+function listLanIpv4Addresses() {
+  const addrs = [];
+  const ifaces = os.networkInterfaces();
+  for (const name of Object.keys(ifaces)) {
+    for (const info of ifaces[name] || []) {
+      if (info && info.family === 'IPv4' && !info.internal) {
+        addrs.push({ name, address: info.address });
+      }
+    }
+  }
+  return addrs;
+}
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[quiz-buzzer] 起動しました（ポート ${PORT}）`);
+  console.log(`  このPC:     http://localhost:${PORT}`);
+  const lan = listLanIpv4Addresses();
+  if (lan.length) {
+    console.log('  同じWi‑Fi/LANの端末からは次のURLで開けます:');
+    lan.forEach(({ name, address }) => {
+      console.log(`    http://${address}:${PORT}  (${name})`);
+    });
+  } else {
+    console.log('  LAN用IPv4が見つかりませんでした。Wi‑Fi接続を確認してください。');
+  }
+  console.log('  ※ インターネット公開は不要です。主催者PCで npm start するだけでLAN内クイズが使えます。');
 });

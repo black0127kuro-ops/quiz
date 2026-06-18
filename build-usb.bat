@@ -28,6 +28,7 @@ xcopy /e /i /q "public" "%OUT%\app\public" >nul
 xcopy /e /i /q "node_modules" "%OUT%\app\node_modules" >nul
 copy /y "portable\quiz-lan.bat" "%OUT%\quiz-lan.bat" >nul
 copy /y "portable\README-USB.txt" "%OUT%\README-USB.txt" >nul
+copy /y "portable\allow-firewall-once.bat" "%OUT%\allow-firewall-once.bat" >nul
 
 if not exist "%OUT%\node\node.exe" (
   echo Downloading Node.js %NODE_VER%...

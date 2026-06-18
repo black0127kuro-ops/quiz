@@ -21,8 +21,8 @@ const ITEM_CATALOG = require('./public/items-catalog.js');
 const ITEM_BY_ID = Object.fromEntries(ITEM_CATALOG.map(it => [it.id, it]));
 const DEFAULT_ENABLED_ITEMS = ['delay5', 'steal_stealth', 'flip', 'flash', 'bonusQ'];
 
-const ROOT = __dirname;
-const PUBLIC_DIR = path.join(ROOT, 'public');
+const ROOT = process.pkg ? path.dirname(process.execPath) : __dirname;
+const PUBLIC_DIR = path.join(__dirname, 'public');
 
 const MAX_ROOMS = 500;
 const MAX_PLAYERS_PER_ROOM = 80;

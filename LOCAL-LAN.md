@@ -90,3 +90,5 @@ ipconfig
 校務PCでは **`quiz-lan.bat`** をダブルクリックするだけ（Node インストール不要）。
 
 詳しくは **`LOCAL-EXE.md`** を参照してください。
+
+Chromebook を主催者にする手順は **`CHROMEBOOK-LAN.md`** を参照してください。
